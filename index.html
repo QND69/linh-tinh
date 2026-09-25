@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Thêm maximum-scale và user-scalable để ngăn zoom khi thao tác nhanh trên mobile -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Quà Tặng Trung Thu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Nunito:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Nunito", sans-serif;
+        margin: 0;
+        overflow: hidden; /* Ngăn scroll, giữ mọi thứ vừa màn hình */
+        background-color: #0f172a; /* Màu nền dự phòng */
+        touch-action: none; /* Ngăn thao tác vuốt trượt màn hình trên điện thoại */
+      }
+
+      .font-dancing {
+        font-family: "Dancing Script", cursive;
+      }
+
+      /* Hiệu ứng trăng sáng */
+      .moon-glow {
+        box-shadow:
+          0 0 50px 20px rgba(253, 230, 138, 0.4),
+          inset 0 0 20px 5px rgba(255, 255, 255, 0.8);
+      }
+
+      /* Lồng đèn đung đưa */
+      @keyframes swing {
+        0% {
+          transform: rotate(-5deg);
+        }
+        50% {
+          transform: rotate(5deg);
+        }
+        100% {
+          transform: rotate(-5deg);
+        }
+      }
+      .lantern {
+        transform-origin: top center;
+        animation: swing 3s ease-in-out infinite;
+      }
+
+      /* Ngôi sao lấp lánh */
+      @keyframes twinkle {
+        0%,
+        100% {
+          opacity: 0.2;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+      .star {
+        animation: twinkle var(--duration) ease-in-out infinite;
+      }
+
+      /* Hiệu ứng cho hộp quà */
+      @keyframes shake {
+        0% {
+          transform: rotate(0deg);
+        }
+        25% {
+          transform: rotate(-10deg);
+        }
+        50% {
+          transform: rotate(0deg);
+        }
+        75% {
+          transform: rotate(10deg);
+        }
+        100% {
+          transform: rotate(0deg);
+        }
+      }
+      .gift-shake:hover {
+        animation: shake 0.5s ease-in-out infinite;
+        cursor: pointer;
+      }
+
+      /* Lớp quản lý các phần của trang (Screens) */
+      .screen {
+        position: fixed; /* Dùng fixed thay cho absolute để khắc phục triệt để lỗi bị dịch trang hoặc khuất lồng đèn */
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh; /* Fallback cho các trình duyệt cũ */
+        height: 100dvh; /* Dùng dvh để tự động co dãn vừa vặn ngay cả khi có thanh địa chỉ trên mobile */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition:
+          opacity 1s ease-in-out,
+          visibility 1s ease-in-out;
+        opacity: 0;
+        visibility: hidden;
+        z-index: 0;
+      }
+      .screen.active {
+        opacity: 1;
+        visibility: visible;
+        z-index: 10;
+      }
+
+      /* Background bầu trời đêm chung cho phần 1 & 2 */
+      .night-sky {
+        /* Phóng to nền để có khoảng không kéo xuống */
+        background: linear-gradient(
+          to bottom,
+          #020617 0%,
+          #1e1b4b 30%,
+          #312e81 60%,
+          #020617 100%
+        );
+        background-size: 100% 200%;
+        background-position: center top;
+        transition:
+          transform 1.5s ease-in-out,
+          background-position 1.5s ease-in-out;
+      }
+
+      /* Hiệu ứng màn đêm kéo xuống */
+      .sky-pulled-down {
+        transform: translateY(30vh); /* Đẩy các ngôi sao rơi xuống dưới */
+        background-position: center bottom; /* Thay đổi dải màu tạo cảm giác bầu trời sụp xuống */
+      }
+
+      /* Background thiệp phần 3 */
+      .card-bg {
+        background: radial-gradient(circle, #fffbeb 0%, #fde68a 100%);
+      }
+
+      /* Nút Không chạy trốn */
+      #btn-no {
+        transition:
+          top 0.3s ease,
+          left 0.3s ease; /* Chuyển động mượt khi nhảy */
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Nhạc nền: Đã chèn file mp3 trực tiếp -->
+    <audio id="bgMusic" loop>
+      <source src="Hachimi mr biao tiktok version_0_40.mp3" type="audio/mpeg" />
+    </audio>
+
+    <!-- Họa tiết bầu trời đêm (Sao) - Dùng chung cho Screen 1 & 2 -->
+    <!-- Mở rộng khoảng không gian (-top và -bottom) để khi kéo màn đêm xuống không bị hụt viền đen -->
+    <div
+      id="star-container"
+      class="absolute inset-x-0 -top-[30vh] -bottom-[30vh] pointer-events-none z-0 night-sky"
+    >
+      <!-- Javascript sẽ tự động thêm các ngôi sao vào đây -->
+    </div>
+
+    <!-- ================= PHẦN 1: MÀN HÌNH CHÀO MỪNG ================= -->
+    <div id="screen1" class="screen active text-white">
+      <!-- Ảnh thêm vào góc phải bên dưới của màn hình 1 (Đã fix responsive) -->
+      <!-- Đổi từ w-[20vw] sang w-[40vw] md:w-[20vw] để trên điện thoại nhìn rõ hơn -->
+      <img
+        src="man_pointing_no_bg.png"
+        alt="Man Pointing"
+        class="fixed bottom-0 right-0 w-[45vw] sm:w-[30vw] md:w-[20vw] h-auto z-20 drop-shadow-xl"
+      />
+
+      <!-- Lồng đèn trang trí (Đã fix thu nhỏ và kéo sát viền trên mobile) -->
+      <!-- CHỈNH KÍCH THƯỚC LỒNG ĐÈN Ở ĐÂY: Thay đổi cụm 'text-6xl sm:text-7xl md:text-8xl' -->
+      <div
+        class="absolute top-2 md:top-0 left-2 md:left-10 text-6xl sm:text-7xl md:text-8xl lantern drop-shadow-lg z-20"
+        style="animation-delay: 0s"
+      >
+        🏮
+      </div>
+      <div
+        class="absolute top-2 md:top-0 right-2 md:right-10 text-6xl sm:text-7xl md:text-8xl lantern drop-shadow-lg z-20"
+        style="animation-delay: 1.5s"
+      >
+        🏮
+      </div>
+
+      <!-- Mặt trăng -->
+      <!-- CHỈNH KÍCH THƯỚC MẶT TRĂNG VÀ CHỊ HẰNG TO RA Ở ĐÂY -->
+      <!-- w-48 (mobile) -> sm:w-64 (tablet) -> md:w-80 (PC) -->
+      <div
+        id="the-moon"
+        class="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 bg-yellow-200 rounded-full moon-glow mb-10 md:mb-12 flex items-center justify-center relative z-20 mt-8"
+      >
+        <div
+          class="absolute inset-0 rounded-full bg-yellow-400 opacity-20 blur-md"
+        ></div>
+
+        <!-- Ảnh Chị Hằng (thay cho thỏ), dùng địa chỉ tương đối, vị trí đẩy lên cao so với mặt trăng -->
+        <!-- w-[100%] để tự scale theo kích thước của mặt trăng bên trên -->
+        <img
+          id="moon-icon"
+          src="chi_hang_no_bg.png"
+          alt="Chị Hằng"
+          class="absolute z-10 w-[95%] sm:w-[90%] md:w-[85%] -top-[25%] md:-top-[20%] object-contain"
+        />
+      </div>
+
+      <h1
+        class="font-dancing text-5xl md:text-7xl text-yellow-300 mb-4 text-center drop-shadow-lg px-2 relative z-20"
+      >
+        Đêm Hội Trăng Rằm
+      </h1>
+      <p
+        class="text-lg md:text-2xl text-yellow-100 mb-10 md:mb-12 text-center max-w-md px-4 relative z-20"
+      >
+        Trung Thu đến rồi 🥰 <br />Có một món quà muốn gửi đến cậu...
+      </p>
+
+      <button
+        id="btn-start"
+        class="relative z-20 px-8 py-3 md:px-8 md:py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-white font-bold rounded-full text-lg md:text-xl shadow-[0_0_15px_rgba(250,204,21,0.6)] transform transition hover:scale-110"
+      >
+        Mở quà nhé ✨
+      </button>
+    </div>
+
+    <!-- ================= PHẦN 2: HỘP QUÀ VÀ CÂU HỎI (ĐÃ GỘP) ================= -->
+    <div id="screen2" class="screen text-white">
+      <div class="flex flex-col items-center relative w-full max-w-lg px-4">
+        <!-- Hộp quà -->
+        <div
+          id="gift-box"
+          class="text-8xl md:text-9xl gift-shake transition-transform duration-500 drop-shadow-2xl mb-4"
+        >
+          🎁
+        </div>
+
+        <!-- Khu vực câu hỏi giờ được hiển thị luôn thay vì ẩn đi -->
+        <div
+          id="question-area"
+          class="flex flex-col items-center mt-2 w-full transition-opacity duration-1000"
+        >
+          <h2
+            class="font-dancing text-4xl md:text-5xl text-yellow-300 mb-8 md:mb-10 text-center px-2"
+          >
+            Cậu có muốn nhận quà không? 🥺
+          </h2>
+
+          <!-- Nơi chứa 2 nút -->
+          <div
+            class="relative w-full flex justify-center items-center h-20 md:h-32"
+          >
+            <!-- Hộp giữ chỗ cho nút Yes -->
+            <div class="w-1/2 flex justify-end pr-3 md:pr-5">
+              <button
+                id="btn-yes"
+                class="px-5 py-3 md:px-8 md:py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-full text-base md:text-xl shadow-lg transform transition hover:scale-110 z-20 whitespace-nowrap"
+              >
+                Có chứ 🥰
+              </button>
+            </div>
+            <!-- Hộp giữ chỗ cho nút No -->
+            <div class="w-1/2 flex justify-start pl-3 md:pl-5">
+              <button
+                id="btn-no"
+                class="px-5 py-3 md:px-8 md:py-3 bg-red-500 text-white font-bold rounded-full text-base md:text-xl shadow-lg z-30 whitespace-nowrap"
+              >
+                Không 😒
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= PHẦN 3: THIỆP CHÚC MỪNG ================= -->
+    <div id="screen3" class="screen card-bg">
+      <!-- Khung thiệp -->
+      <div
+        class="relative w-[92%] sm:w-11/12 max-w-2xl bg-white/40 backdrop-blur-sm border-4 border-yellow-400 rounded-3xl p-6 sm:p-8 md:p-12 shadow-2xl flex flex-col items-center text-center transform scale-95 opacity-0 transition-all duration-1000"
+        id="card-content"
+      >
+        <!-- Góc trang trí (Đã fix thu nhỏ và kéo vào trong trên mobile để không tràn viền) -->
+        <div
+          class="absolute -top-4 -left-4 sm:-top-3 sm:-left-3 md:-top-6 md:-left-6 text-4xl sm:text-4xl md:text-6xl drop-shadow-md"
+        >
+          🌸
+        </div>
+        <div
+          class="absolute -top-4 -right-4 sm:-top-3 sm:-right-3 md:-top-6 md:-right-6 text-4xl sm:text-4xl md:text-6xl drop-shadow-md"
+        >
+          🌸
+        </div>
+        <div
+          class="absolute -bottom-4 -left-4 sm:-bottom-3 sm:-left-3 md:-bottom-6 md:-left-6 text-4xl sm:text-4xl md:text-6xl drop-shadow-md"
+        >
+          🥮
+        </div>
+        <div
+          class="absolute -bottom-4 -right-4 sm:-bottom-3 sm:-right-3 md:-bottom-6 md:-right-6 text-4xl sm:text-4xl md:text-6xl drop-shadow-md"
+        >
+          🥮
+        </div>
+
+        <div
+          class="text-6xl md:text-7xl mb-3 md:mb-4 text-yellow-500 drop-shadow-md"
+        >
+          🌕
+        </div>
+
+        <h1
+          class="font-dancing text-5xl md:text-7xl text-red-600 mb-3 md:mb-6 drop-shadow-sm leading-tight"
+        >
+          Trung Thu<br />Vui Vẻ!
+        </h1>
+
+        <p
+          class="text-base sm:text-lg md:text-2xl text-gray-800 font-semibold mb-6 leading-relaxed"
+        >
+          Chúc cậu có một ngày Tết Đoàn Viên thật ấm áp, ngập tràn niềm vui và
+          hạnh phúc. Luôn giữ nụ cười tươi trên môi nhé! ❤️
+        </p>
+
+        <div class="flex gap-4 text-3xl md:text-4xl">
+          <span>🐰</span><span>🏮</span><span>🎉</span>
+        </div>
+      </div>
+
+      <!-- Hiệu ứng hoa rơi rắc nhẹ xung quanh thiệp -->
+      <div
+        id="confetti-container"
+        class="absolute inset-0 pointer-events-none overflow-hidden z-20"
+      ></div>
+    </div>
+
+    <script>
+      // Các DOM elements
+      const screen1 = document.getElementById("screen1");
+      const screen2 = document.getElementById("screen2");
+      const screen3 = document.getElementById("screen3");
+
+      const btnStart = document.getElementById("btn-start");
+      const bgMusic = document.getElementById("bgMusic");
+
+      // Đặt âm lượng nhạc nền nhỏ xuống mặc định
+      bgMusic.volume = 0.01;
+
+      const starContainer = document.getElementById("star-container");
+
+      const btnYes = document.getElementById("btn-yes");
+      const btnNo = document.getElementById("btn-no");
+
+      const cardContent = document.getElementById("card-content");
+
+      // Hàm tạo sao lấp lánh nền
+      function createStars() {
+        for (let i = 0; i < 100; i++) {
+          let star = document.createElement("div");
+          star.className = "star absolute bg-white rounded-full";
+          let size = Math.random() * 3 + 1 + "px";
+          star.style.width = size;
+          star.style.height = size;
+          star.style.top = Math.random() * 100 + "vh";
+          star.style.left = Math.random() * 100 + "vw";
+          star.style.setProperty("--duration", Math.random() * 3 + 2 + "s");
+          starContainer.appendChild(star);
+        }
+      }
+      createStars();
+
+      // CHUYỂN TỪ PHẦN 1 -> PHẦN 2
+      btnStart.addEventListener("click", () => {
+        // Cố gắng bật nhạc (Bắt lỗi nếu không có file mp3)
+        bgMusic
+          .play()
+          .catch((e) =>
+            console.log("Không có file nhạc để phát, nhưng vẫn tiếp tục."),
+          );
+
+        // --- LOGIC XỬ LÝ MẶT TRĂNG VÀ CHỊ HẰNG ---
+
+        const theMoon = document.getElementById("the-moon");
+        const moonIcon = document.getElementById("moon-icon");
+
+        // 1. Lấy vị trí và kích thước thật hiện tại của mặt trăng trên màn hình
+        const rect = theMoon.getBoundingClientRect();
+
+        // 2. Chuyển nó sang absolute/fixed ngay tại đúng chỗ đó để nó không bị trôi theo flexbox
+        theMoon.style.position = "fixed";
+        theMoon.style.top = rect.top + "px";
+        theMoon.style.left = rect.left + "px";
+        theMoon.style.width = rect.width + "px";
+        theMoon.style.height = rect.height + "px";
+        theMoon.style.margin = "0"; // Bỏ các margin cũ đi
+        theMoon.style.zIndex = "50"; // Đẩy lên lớp layer cao nhất
+
+        // 3. Chuyển thẻ HTML mặt trăng ra ngoài body để nó không bị tàng hình khi screen1 mờ đi
+        document.body.appendChild(theMoon);
+
+        // Buộc trình duyệt tính toán lại vị trí trước khi áp dụng chuyển động (tránh lỗi nháy chớp)
+        void theMoon.offsetWidth;
+
+        // 4. Kích hoạt chuyển động mặt trăng bay lên góc và thu nhỏ
+        theMoon.style.transition = "all 1.5s ease-in-out";
+        theMoon.style.top = "20px"; // Bay lên góc trên
+        theMoon.style.left = "20px"; // Bay sang góc trái
+        theMoon.style.width = "6rem"; // Thu nhỏ (khoảng 96px)
+        theMoon.style.height = "6rem";
+
+        // 5. XÓA HOÀN TOÀN HÌNH CHỊ HẰNG KHI SANG TRANG 2
+        // Cho mờ đi mượt mà trong 0.5s rồi xóa hẳn khỏi file HTML
+        if (moonIcon) {
+          moonIcon.style.transition = "opacity 0.5s ease";
+          moonIcon.style.opacity = "0";
+          setTimeout(() => {
+            moonIcon.remove(); // Lệnh xóa hoàn toàn khỏi DOM
+          }, 500);
+        }
+
+        // 6. Kích hoạt hiệu ứng màn đêm bị kéo xuống
+        starContainer.classList.add("sky-pulled-down");
+
+        // Đổi màn hình
+        screen1.classList.remove("active");
+        screen2.classList.add("active");
+      });
+
+      // LOGIC NÚT "KHÔNG" CHẠY TRỐN
+      // Đảm bảo nút "Không" có thể trôi nổi tự do trên toàn màn hình
+      function runAway() {
+        // Lấy kích thước hiện tại của màn hình
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
+        // Lấy kích thước của nút
+        const btnWidth = btnNo.offsetWidth;
+        const btnHeight = btnNo.offsetHeight;
+
+        // Tính toán vị trí random an toàn (không bị lẹm ra ngoài màn hình)
+        // Lấy từ 10% đến 80% để không dính sát viền
+        const randomX =
+          Math.floor(Math.random() * (windowWidth - btnWidth - 40)) + 20;
+        const randomY =
+          Math.floor(Math.random() * (windowHeight - btnHeight - 40)) + 20;
+
+        // Chuyển nút sang absolute để bay tự do (trên mobile cần dùng fixed để tính toán chuẩn hơn)
+        btnNo.style.position = "fixed";
+        btnNo.style.left = randomX + "px";
+        btnNo.style.top = randomY + "px";
+      }
+
+      // Bắt sự kiện hover (trên máy tính) và touch (trên điện thoại)
+      btnNo.addEventListener("mouseover", runAway);
+      btnNo.addEventListener("touchstart", (e) => {
+        e.preventDefault(); // Ngăn click nhầm
+        runAway();
+      });
+
+      // CHUYỂN TỪ PHẦN 2 -> PHẦN 3
+      btnYes.addEventListener("click", () => {
+        screen2.classList.remove("active");
+
+        // Ẩn nền trời sao đi cho sáng sủa
+        starContainer.style.opacity = "0";
+
+        // Ẩn luôn mặt trăng đi cho thiệp đẹp
+        const theMoon = document.getElementById("the-moon");
+        if (theMoon) {
+          theMoon.style.opacity = "0";
+        }
+
+        setTimeout(() => {
+          screen3.classList.add("active");
+
+          // Hiệu ứng popup thiệp
+          setTimeout(() => {
+            cardContent.classList.remove("scale-95", "opacity-0");
+            cardContent.classList.add("scale-100", "opacity-100");
+          }, 200);
+        }, 800);
+      });
+    </script>
+  </body>
+</html>
+```<FollowUp></FollowUp>
